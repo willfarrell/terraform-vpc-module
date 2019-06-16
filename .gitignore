@@ -7,3 +7,10 @@
 
 # .tfvars files
 *.tfvars
+
+# IDE
+.idea
+*.iml
+
+# OS
+.DS_Store
