@@ -120,9 +120,16 @@ resource "aws_autoscaling_group" "nat" {
   vpc_zone_identifier = [
     aws_subnet.public[count.index].id,
   ]
-  tags = [
-    "${data.null_data_source.tags_as_list_of_maps}",
-  ]
+
+  dynamic "tag" {
+    for_each = local.tags
+    content {
+      key = tag.key
+      value = tag.value
+
+      propagate_at_launch = true
+    }
+  }
 }
 
 ## SG

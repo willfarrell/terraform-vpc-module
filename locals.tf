@@ -33,7 +33,7 @@ locals {
   cidr_block = var.cidr_block
   az_count = min(
     max(1, var.az_count),
-    length(data.aws_availability_zones.available.names),
+    length(data.aws_availability_zones.available.names)
   )
   az_name      = data.aws_availability_zones.available.names
   public_cidr  = data.external.public_cidr.result
