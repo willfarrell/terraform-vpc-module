@@ -21,23 +21,6 @@ resource "aws_route_table_association" "private-instance" {
 # instance
 # *************************************
 # module { count } is not supported :(
-# TODO refactor to use EC2 module when it is availible, later version of 0.12
-
-data "template_file" "userdata" {
-  count    = var.nat_type == "instance" ? local.az_count : 0
-  template = file("${path.module}/user_data.sh")
-
-  vars = {
-    BANNER                = "NAT ${local.az_name[count.index]}"
-    EIP_ID                = "${aws_eip.nat[count.index].id}}"
-    SUBNET_ID             = aws_subnet.private[count.index].id
-    ROUTE_TABLE_ID        = aws_route_table.private-instance[count.index].id
-    VPC_CIDR              = var.cidr_block
-    IAM_AUTHORIZED_GROUPS = var.iam_user_groups
-    SUDOERS_GROUPS        = var.iam_sudo_groups
-    LOCAL_GROUPS          = ""
-  }
-}
 
 data "aws_ami" "nat" {
   most_recent = true
@@ -46,7 +29,7 @@ data "aws_ami" "nat" {
     name = "name"
 
     values = [
-      "amzn-ami-vpc-nat-hvm-*-x86_64-ebs",
+      "amzn-ami-hvm-*-x86_64-nat",
     ]
   }
 
@@ -62,7 +45,6 @@ data "aws_ami" "nat" {
 }
 
 resource "aws_launch_configuration" "nat" {
-  depends_on           = [data.template_file.userdata] # doesn't work when changing az_count
   count                = var.nat_type == "instance" ? local.az_count : 0
   name_prefix          = "${local.name}-nat-${local.az_name[count.index]}-"
   image_id             = data.aws_ami.nat.image_id
@@ -70,7 +52,16 @@ resource "aws_launch_configuration" "nat" {
   instance_type        = var.instance_type
   iam_instance_profile = aws_iam_instance_profile.main[count.index].name
   security_groups      = [aws_security_group.nat[count.index].id]
-  user_data            = data.template_file.userdata[count.index].rendered
+  user_data            = templatefile("${path.module}/user_data.sh", {
+    BANNER                = "NAT ${local.az_name[count.index]}"
+    EIP_ID                = "${aws_eip.nat[count.index].id}}"
+    SUBNET_ID             = aws_subnet.private[count.index].id
+    ROUTE_TABLE_ID        = aws_route_table.private-instance[count.index].id
+    VPC_CIDR              = var.cidr_block
+    IAM_AUTHORIZED_GROUPS = var.iam_user_groups
+    SUDOERS_GROUPS        = var.iam_sudo_groups
+    LOCAL_GROUPS          = ""
+  })
   ebs_optimized        = "false"
   enable_monitoring    = "true"
 
@@ -87,29 +78,8 @@ resource "aws_launch_configuration" "nat" {
   }
 }
 
-data "null_data_source" "tags_as_list_of_maps" {
-  count = length(keys(local.tags))
-
-  inputs = merge(
-    {
-      "key"                 = element(keys( merge(
-      local.tags, {
-        "Name" = "${local.name}-nat"
-      })), count.index)
-      "value"               = element(values( merge(
-      local.tags,
-      {
-        "Name" = "${local.name}-nat"
-      }
-      )), count.index)
-      "propagate_at_launch" = "true"
-    }
-  )
-}
-
 resource "aws_autoscaling_group" "nat" {
   count                     = var.nat_type == "instance" ? local.az_count : 0
-  depends_on                = [data.null_data_source.tags_as_list_of_maps]
   name                      = "${local.name}-nat-${local.az_name[count.index]}-asg"
   max_size                  = "1"
   min_size                  = "1"
@@ -122,7 +92,9 @@ resource "aws_autoscaling_group" "nat" {
   ]
 
   dynamic "tag" {
-    for_each = local.tags
+    for_each = merge(local.tags, {
+      "Name" = "${local.name}-nat-${local.az_name[count.index]}"
+    })
     content {
       key = tag.key
       value = tag.value
