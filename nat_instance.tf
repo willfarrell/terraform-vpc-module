@@ -52,7 +52,7 @@ resource "aws_launch_configuration" "nat" {
   instance_type        = var.instance_type
   iam_instance_profile = aws_iam_instance_profile.main[count.index].name
   security_groups      = [aws_security_group.nat[count.index].id]
-  user_data            = templatefile("${path.module}/user_data.sh", {
+  user_data = templatefile("${path.module}/user_data.sh", {
     BANNER                = "NAT ${local.az_name[count.index]}"
     EIP_ID                = "${aws_eip.nat[count.index].id}}"
     SUBNET_ID             = aws_subnet.private[count.index].id
@@ -62,8 +62,8 @@ resource "aws_launch_configuration" "nat" {
     SUDOERS_GROUPS        = var.iam_sudo_groups
     LOCAL_GROUPS          = ""
   })
-  ebs_optimized        = "false"
-  enable_monitoring    = "true"
+  ebs_optimized     = "false"
+  enable_monitoring = "true"
 
   # Must be true in public subnets if assigning EIP in userdata
   associate_public_ip_address = "true"
@@ -96,7 +96,7 @@ resource "aws_autoscaling_group" "nat" {
       Name = "${local.name}-nat-${local.az_name[count.index]}"
     })
     content {
-      key = tag.key
+      key   = tag.key
       value = tag.value
 
       propagate_at_launch = true

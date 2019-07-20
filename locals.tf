@@ -4,8 +4,8 @@ data "aws_availability_zones" "available" {
 data "null_data_source" "cidr" {
   count = local.az_count
   inputs = {
-    public = "${replace(var.cidr_block, ".0.0/16", "")}.${count.index}.0/24"
-    private = "${replace(var.cidr_block, ".0.0/16", "")}.${(count.index+1)*16}.0/20"
+    public  = "${replace(var.cidr_block, ".0.0/16", "")}.${count.index}.0/24"
+    private = "${replace(var.cidr_block, ".0.0/16", "")}.${(count.index + 1) * 16}.0/20"
   }
 }
 
@@ -26,7 +26,7 @@ locals {
     length(data.aws_availability_zones.available.names)
   )
   az_name      = data.aws_availability_zones.available.names
-  public_cidr = data.null_data_source.cidr.*.outputs.public
+  public_cidr  = data.null_data_source.cidr.*.outputs.public
   private_cidr = data.null_data_source.cidr.*.outputs.private
 }
 

@@ -55,6 +55,6 @@ variable "key_name" {
 }
 
 variable "ami_account_id" {
-  type = string
+  type    = string
   default = "self"
 }
