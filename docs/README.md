@@ -37,28 +37,26 @@ output "nat_billing_suggestion" {
   value = module.vpc.billing_suggestion
 }
 
-# For serverless
-resource "aws_ssm_parameter" "vpc_security_group" {
-  name        = "/vpc/security_group"
-  description = "VPC Security Group"
+# Output config information to SSM Paramstore for use from Serverless, Lambda or other components
+resource "aws_ssm_parameter" "vpc_id" {
+  name        = "/infrastructure/vpc/id"
+  description = "VPC ID"
   type        = "SecureString"
   value       = module.vpc.id
 }
 
-resource "aws_ssm_parameter" "public_subnets" {
-  name        = "/vpc/public_subnets"
+resource "aws_ssm_parameter" "vpc_public_subnets" {
+  name        = "/infrastructure/vpc/public_subnets"
   description = "VPC public subnets"
   type        = "SecureString"
-  value       = join(",", flatten([
-    module.vpc.public_subnet_ids]))
+  value       = join(",", module.vpc.public_subnet_ids)
 }
 
-resource "aws_ssm_parameter" "private_subnets" {
-  name        = "/vpc/private_subnets"
+resource "aws_ssm_parameter" "vpc_private_subnets" {
+  name        = "/infrastructure/vpc/private_subnets"
   description = "VPC private subnets"
   type        = "SecureString"
-  value       = join(",", flatten([
-    module.vpc.private_subnet_ids]))
+  value       = join(",", module.vpc.private_subnet_ids)
 }
 ```
 
@@ -75,7 +73,10 @@ resource "aws_vpc_endpoint" "s3" {
           "Sid":"",
           "Effect": "Allow",
           "Action": "s3:*",
-          "Resource": "arn:aws:s3:::${aws_s3_bucket.***.id}/*",
+          "Resource": [
+            "arn:aws:s3:::*"
+            "arn:aws:s3:::*/*"
+          ],
           "Principal": "*",
           "Condition": {
             "StringEquals": {
@@ -136,23 +137,6 @@ resource "aws_network_acl_rule" "egress_postgres" {
   cidr_block     = "0.0.0.0/0"
   from_port      = 5432
   to_port        = 5432
-}
-```
-
-### Output config information to SSM Paramstore for use from Serverless, Lambda or other components
-```hcl-terraform
-resource "aws_ssm_parameter" "vpc_sg" {
-  name        = "/infrastructure/vpc/sg"
-  description = "VPC security group"
-  type        = "SecureString"
-  value       = "${aws_security_group.lambda.id}"
-}
-
-resource "aws_ssm_parameter" "vpc_private_subnets" {
-  name        = "/infrastructure/vpc/private_subnets"
-  description = "VPC private subnets "
-  type        = "SecureString"
-  value       = "${join(",", module.vpc.private_subnet_ids)}"
 }
 ```
 
