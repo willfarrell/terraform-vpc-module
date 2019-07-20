@@ -7,7 +7,7 @@ resource "aws_route_table" "private-instance" {
   tags = merge(
     local.tags,
     {
-      "Name" = "private-${local.name}-${local.az_name[count.index]}"
+      Name = "private-${local.name}-${local.az_name[count.index]}"
     }
   )
 }
@@ -41,7 +41,7 @@ data "aws_ami" "nat" {
     ]
   }
 
-  owners = ["self"]
+  owners = [var.ami_account_id]
 }
 
 resource "aws_launch_configuration" "nat" {
@@ -93,7 +93,7 @@ resource "aws_autoscaling_group" "nat" {
 
   dynamic "tag" {
     for_each = merge(local.tags, {
-      "Name" = "${local.name}-nat-${local.az_name[count.index]}"
+      Name = "${local.name}-nat-${local.az_name[count.index]}"
     })
     content {
       key = tag.key
@@ -153,7 +153,7 @@ resource "aws_security_group" "nat" {
   tags = merge(
     local.tags,
     {
-      "Name" = "${local.name}-nat-${local.az_name[count.index]}"
+      Name = "${local.name}-nat-${local.az_name[count.index]}"
     }
   )
 }

@@ -7,7 +7,7 @@ resource "aws_subnet" "private" {
   tags = merge(
     local.tags,
     {
-      "Name" = "${local.name}-${local.az_name[count.index]}-private"
+      Name = "${local.name}-${local.az_name[count.index]}-private"
     }
   )
 }

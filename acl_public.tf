@@ -7,7 +7,7 @@ resource "aws_network_acl" "public" {
   tags = merge(
     local.tags,
     {
-      "Name" = "${local.name}-public"
+      Name = "${local.name}-public"
     }
   )
 }

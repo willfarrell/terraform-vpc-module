@@ -16,7 +16,7 @@ resource "aws_route_table" "private-gateway" {
   tags = merge(
     local.tags,
     {
-      "Name" = "private-${local.name}-${local.az_name[count.index]}"
+      Name = "private-${local.name}-${local.az_name[count.index]}"
     }
   )
 }
@@ -36,7 +36,7 @@ resource "aws_nat_gateway" "public" {
   tags = merge(
     local.tags,
     {
-      "Name" = "${local.name}-nat-${local.az_name[count.index]}"
+      Name = "${local.name}-nat-${local.az_name[count.index]}"
     }
   )
 }

@@ -23,7 +23,7 @@ variable "cidr_block" {
 
 # NAT vars
 variable "nat_type" {
-  default = "gateway"
+  default = "none"
 }
 
 variable "iam_user_groups" {
@@ -54,3 +54,7 @@ variable "key_name" {
   default = ""
 }
 
+variable "ami_account_id" {
+  type = string
+  default = "self"
+}
