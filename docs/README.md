@@ -74,7 +74,7 @@ resource "aws_vpc_endpoint" "s3" {
           "Effect": "Allow",
           "Action": "s3:*",
           "Resource": [
-            "arn:aws:s3:::*"
+            "arn:aws:s3:::*",
             "arn:aws:s3:::*/*"
           ],
           "Principal": "*",
@@ -112,6 +112,9 @@ resource "aws_vpc_endpoint" "dynamodb" {
 }
 POLICY
 }
+
+# See https://github.com/terraform-aws-modules/terraform-aws-vpc/blob/master/main.tf#L827-L1456 for more examples
+
 ```
 
 ### Extra ACL Rules
@@ -141,23 +144,15 @@ resource "aws_network_acl_rule" "egress_postgres" {
 ```
 
 ## Input
-Name         | Type        | Default       | Required | Description
--------------|-------------|---------------|----------|-------------
-name         | string      | ``            | No       | Application Name
-default_tags | map(string) | `{}`          | No       | Tag to apply to all resources
-cidr_block   | string      | `10.0.0.0/16` | No       | Custom CIDR block, must end with `.0.0/16`
-az_count     | string      | `2`           | No       | Number on AZs to initialize. Note: RDS/EKS requires min of 2. See [Map](https://aws.amazon.com/about-aws/global-infrastructure/) for AZ count for each region.
-nat_type     | string      | `none`        | No       | Type of NAT to use `gateway`, `instance` or `none`. See [Comparison](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-comparison.html).
-
-### Input for NAT instance
-Name                      | Type   | Default    | Required  | Description
---------------------------|--------|------------|-----------|-------------
-key_name                  | string | ``         | No        | name of root ssh key, should be used for debug only
-bastion_security_group_id | string | ``         | No        | bastion security group id
-iam_user_groups           | string | ``         | No        | name of iam group that should have ssh access, comma separated list
-iam_sudo_groups           | string | ``         | No        | name of iam group that should have ssh sudo access, comma separated list
-instance_type             | string | `t3.micro` | No        | override the instance type
-ami_account_id            | string | `self`     | No        | account id where the AMI resides. See [Packer NAT](https://github.com/willfarrell/terraform-ec-modules/tree/master/packer/nat).
+Name           | Type        | Default       | Required | Description
+---------------|-------------|---------------|----------|-------------
+name           | string      | ``            | No       | Application Name
+default_tags   | map(string) | `{}`          | No       | Tag to apply to all resources
+cidr_block     | string      | `10.0.0.0/16` | No       | Custom CIDR block, must end with `.0.0/16`
+az_count       | string      | `2`           | No       | Number on AZs to initialize. Note: RDS/EKS requires min of 2. See [Map](https://aws.amazon.com/about-aws/global-infrastructure/) for AZ count for each region.
+nat_type       | string      | `none`        | No       | Type of NAT to use `gateway`, `instance` or `none`. See [Comparison](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-comparison.html).
+instance_type  | string      | `t3.micro`    | No       | When `nat_type == instance`. override the instance type
+ami_account_id | string      | `self`        | No       | When `nat_type == instance`. account id where the AMI resides. See [Packer NAT](https://github.com/willfarrell/terraform-ec-modules/tree/master/packer/nat).
 
 ## Output
 - **id:** vpc id
