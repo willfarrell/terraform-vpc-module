@@ -39,7 +39,7 @@ variable "bastion_security_group_id" {
 }
 
 variable "instance_type" {
-  default = "t3.micro"
+  default = "t3a.nano"
 }
 
 variable "volume_type" {
