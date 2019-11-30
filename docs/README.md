@@ -41,22 +41,29 @@ output "nat_billing_suggestion" {
 resource "aws_ssm_parameter" "vpc_id" {
   name        = "/infrastructure/vpc/id"
   description = "VPC ID"
-  type        = "SecureString"
+  type        = "String"
   value       = module.vpc.id
 }
 
 resource "aws_ssm_parameter" "vpc_public_subnets" {
   name        = "/infrastructure/vpc/public_subnets"
   description = "VPC public subnets"
-  type        = "SecureString"
+  type        = "StringList"
   value       = join(",", module.vpc.public_subnet_ids)
 }
 
 resource "aws_ssm_parameter" "vpc_private_subnets" {
   name        = "/infrastructure/vpc/private_subnets"
   description = "VPC private subnets"
-  type        = "SecureString"
+  type        = "StringList"
   value       = join(",", module.vpc.private_subnet_ids)
+}
+
+resource "aws_ssm_parameter" "vpc_secuirty_group" {
+  name        = "/infrastructure/vpc/security_group"
+  description = "VPC security group"
+  type        = "String"
+  value       = module.vpc.security_group_id
 }
 ```
 

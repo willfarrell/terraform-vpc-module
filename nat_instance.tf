@@ -5,10 +5,10 @@ resource "aws_route_table" "private-instance" {
   vpc_id = aws_vpc.main.id
 
   tags = merge(
-    local.tags,
-    {
-      Name = "private-${local.name}-${local.az_name[count.index]}"
-    }
+  local.tags,
+  {
+    Name = "private-${local.name}-${local.az_name[count.index]}"
+  }
   )
 }
 
@@ -41,7 +41,8 @@ data "aws_ami" "nat" {
     ]
   }
 
-  owners = [var.ami_account_id]
+  owners = [
+    var.ami_account_id]
 }
 
 resource "aws_launch_configuration" "nat" {
@@ -51,10 +52,11 @@ resource "aws_launch_configuration" "nat" {
   key_name             = var.key_name
   instance_type        = var.instance_type
   iam_instance_profile = aws_iam_instance_profile.main[count.index].name
-  security_groups      = [aws_security_group.nat[count.index].id]
-  user_data = templatefile("${path.module}/user_data.sh", {
+  security_groups      = [
+    aws_security_group.nat[count.index].id]
+  user_data            = templatefile("${path.module}/user_data.sh", {
     BANNER                = "NAT ${local.az_name[count.index]}"
-    EIP_ID                = "${aws_eip.nat[count.index].id}}"
+    EIP_ID                = aws_eip.nat[count.index].id
     SUBNET_ID             = aws_subnet.private[count.index].id
     ROUTE_TABLE_ID        = aws_route_table.private-instance[count.index].id
     VPC_CIDR              = var.cidr_block
@@ -62,8 +64,8 @@ resource "aws_launch_configuration" "nat" {
     SUDOERS_GROUPS        = var.iam_sudo_groups
     LOCAL_GROUPS          = ""
   })
-  ebs_optimized     = "false"
-  enable_monitoring = "true"
+  ebs_optimized        = "false"
+  enable_monitoring    = "true"
 
   # Must be true in public subnets if assigning EIP in userdata
   associate_public_ip_address = "true"
@@ -151,10 +153,10 @@ resource "aws_security_group" "nat" {
   }
 
   tags = merge(
-    local.tags,
-    {
-      Name = "${local.name}-nat-${local.az_name[count.index]}"
-    }
+  local.tags,
+  {
+    Name = "${local.name}-nat-${local.az_name[count.index]}"
+  }
   )
 }
 
@@ -200,10 +202,10 @@ EOF
 }
 
 resource "aws_iam_policy" "main-nat" {
-  count = var.nat_type == "instance" ? local.az_count : 0
-  name = "${local.name}-nat-${local.az_name[count.index]}-route-policy"
-  path = "/"
-  description = "${local.name} NAT Route Tables Policy"
+  count       = var.nat_type == "instance" ? local.az_count : 0
+  name        = "${local.name}-nat-${local.az_name[count.index]}-route-policy"
+  path        = "/"
+  description = "${local.name} NAT EIP & Route Tables Policy"
 
   policy = <<EOF
 {
@@ -211,6 +213,7 @@ resource "aws_iam_policy" "main-nat" {
   "Statement": [
       {
         "Action": [
+          "ec2:AssociateAddress",
           "ec2:ReplaceRoute",
           "ec2:CreateRoute",
           "ec2:DeleteRoute",
@@ -229,18 +232,18 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "main-nat" {
-count      = var.nat_type == "instance" ? local.az_count : 0
-role       = aws_iam_role.main[count.index].name
-policy_arn = aws_iam_policy.main-nat[count.index].arn
+  count      = var.nat_type == "instance" ? local.az_count : 0
+  role       = aws_iam_role.main[count.index].name
+  policy_arn = aws_iam_policy.main-nat[count.index].arn
 }
 
 resource "aws_iam_policy" "main-iam" {
-count       = var.nat_type == "instance" ? local.az_count : 0
-name        = "${local.name}-nat-${local.az_name[count.index]}-iam-policy"
-path        = "/"
-description = "${local.name} NAT SSH IAM Policy"
+  count       = var.nat_type == "instance" ? local.az_count : 0
+  name        = "${local.name}-nat-${local.az_name[count.index]}-iam-policy"
+  path        = "/"
+  description = "${local.name} NAT SSH IAM Policy"
 
-policy = <<EOF
+  policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -272,18 +275,18 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "main-iam" {
-count = var.nat_type == "instance" ? local.az_count : 0
-role = aws_iam_role.main[count.index].name
-policy_arn = aws_iam_policy.main-iam[count.index].arn
+  count      = var.nat_type == "instance" ? local.az_count : 0
+  role       = aws_iam_role.main[count.index].name
+  policy_arn = aws_iam_policy.main-iam[count.index].arn
 }
 
 resource "aws_iam_policy" "main-logs" {
-count = var.nat_type == "instance" ? local.az_count : 0
-name = "${local.name}-nat-${local.az_name[count.index]}-logs-policy"
-path = "/"
-description = "${local.name} NAT Logs Policy"
+  count       = var.nat_type == "instance" ? local.az_count : 0
+  name        = "${local.name}-nat-${local.az_name[count.index]}-logs-policy"
+  path        = "/"
+  description = "${local.name} NAT Logs Policy"
 
-policy = <<EOF
+  policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -324,11 +327,11 @@ resource "aws_iam_role_policy_attachment" "main-ssm-agent" {
 }
 
 # EC2 Output
-output "iam_role_name" {
+output "nat_iam_role_name" {
   value = aws_iam_role.main.*.name
 }
 
-output "security_group_id" {
+output "nat_security_group_ids" {
   value = aws_security_group.nat.*.id
 }
 

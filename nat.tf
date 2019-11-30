@@ -1,6 +1,6 @@
 # local.az_count == length(var.public_subnet_ids)
 resource "aws_eip" "nat" {
-  count = local.az_count
+  count = var.nat_type != "none" ? local.az_count : 0
   vpc   = true
 
   tags = merge(
