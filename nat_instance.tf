@@ -7,7 +7,7 @@ resource "aws_route_table" "private-instance" {
   tags = merge(
   local.tags,
   {
-    Name = "private-${local.name}-${local.az_name[count.index]}"
+    Name = "private-nat-${local.name}-${local.az_name[count.index]}"
   }
   )
 }
@@ -23,6 +23,7 @@ resource "aws_route_table_association" "private-instance" {
 # module { count } is not supported :(
 
 data "aws_ami" "nat" {
+  count       = var.nat_type == "instance" ? local.az_count : 0
   most_recent = true
 
   filter {
@@ -47,13 +48,15 @@ data "aws_ami" "nat" {
 
 resource "aws_launch_configuration" "nat" {
   count                = var.nat_type == "instance" ? local.az_count : 0
+  #spot_price          = "0.0001"
   name_prefix          = "${local.name}-nat-${local.az_name[count.index]}-"
-  image_id             = data.aws_ami.nat.image_id
+  image_id             = data.aws_ami.nat[0].image_id
   key_name             = var.key_name
   instance_type        = var.instance_type
   iam_instance_profile = aws_iam_instance_profile.main[count.index].name
   security_groups      = [
-    aws_security_group.nat[count.index].id]
+    aws_security_group.nat[0].id
+  ]
   user_data            = templatefile("${path.module}/user_data.sh", {
     BANNER                = "NAT ${local.az_name[count.index]}"
     EIP_ID                = aws_eip.nat[count.index].id
@@ -70,9 +73,17 @@ resource "aws_launch_configuration" "nat" {
   # Must be true in public subnets if assigning EIP in userdata
   associate_public_ip_address = "true"
 
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = 1
+    http_tokens                 = "required"
+  }
+
   root_block_device {
-    volume_type = var.volume_type
-    volume_size = var.volume_size
+    volume_type           = var.volume_type
+    volume_size           = var.volume_size
+    delete_on_termination = true
+    encrypted             = true
   }
 
   lifecycle {
@@ -108,8 +119,8 @@ resource "aws_autoscaling_group" "nat" {
 
 ## SG
 resource "aws_security_group" "nat" {
-  count  = var.nat_type == "instance" ? local.az_count : 0
-  name   = "${local.name}-nat-${local.az_name[count.index]}"
+  count  = var.nat_type == "instance" ? 1 : 0
+  name   = "${local.name}-nat-security-group"
   vpc_id = aws_vpc.main.id
 
   ingress {
@@ -117,9 +128,7 @@ resource "aws_security_group" "nat" {
     from_port = 80
     to_port   = 80
 
-    cidr_blocks = [
-      aws_subnet.private[count.index].cidr_block,
-    ]
+    cidr_blocks = aws_subnet.private.*.cidr_block
   }
 
   ingress {
@@ -127,9 +136,7 @@ resource "aws_security_group" "nat" {
     from_port = 443
     to_port   = 443
 
-    cidr_blocks = [
-      aws_subnet.private[count.index].cidr_block,
-    ]
+    cidr_blocks = aws_subnet.private.*.cidr_block
   }
 
   egress {
@@ -140,6 +147,7 @@ resource "aws_security_group" "nat" {
     cidr_blocks = [
       "0.0.0.0/0",
     ]
+    ipv6_cidr_blocks = ["::/0"]
   }
 
   egress {
@@ -150,24 +158,15 @@ resource "aws_security_group" "nat" {
     cidr_blocks = [
       "0.0.0.0/0",
     ]
+    ipv6_cidr_blocks = ["::/0"]
   }
 
   tags = merge(
   local.tags,
   {
-    Name = "${local.name}-nat-${local.az_name[count.index]}"
+    Name = "${local.name}-nat"
   }
   )
-}
-
-resource "aws_security_group_rule" "ssh" {
-  count                    = var.nat_type == "instance" && var.bastion_security_group_id != "" ? local.az_count : 0
-  security_group_id        = aws_security_group.nat[count.index].id
-  type                     = "ingress"
-  from_port                = 22
-  to_port                  = 22
-  protocol                 = "tcp"
-  source_security_group_id = var.bastion_security_group_id
 }
 
 ## IAM
@@ -280,41 +279,13 @@ resource "aws_iam_role_policy_attachment" "main-iam" {
   policy_arn = aws_iam_policy.main-iam[count.index].arn
 }
 
-resource "aws_iam_policy" "main-logs" {
-  count       = var.nat_type == "instance" ? local.az_count : 0
-  name        = "${local.name}-nat-${local.az_name[count.index]}-logs-policy"
-  path        = "/"
-  description = "${local.name} NAT Logs Policy"
-
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:DescribeLogStreams"
-      ],
-      "Resource": [
-        "arn:aws:logs:*:*:*"
-      ]
-    }
-  ]
-}
-EOF
-
-}
-
-resource "aws_iam_role_policy_attachment" "main-logs" {
+resource "aws_iam_role_policy_attachment" "main-cloudwatch-logs" {
   count      = var.nat_type == "instance" ? local.az_count : 0
   role       = aws_iam_role.main[count.index].name
-  policy_arn = aws_iam_policy.main-logs[count.index].arn
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
 
-resource "aws_iam_role_policy_attachment" "main-clowdwatch-agent-server" {
+resource "aws_iam_role_policy_attachment" "main-cloudwatch-agent" {
   count      = var.nat_type == "instance" ? local.az_count : 0
   role       = aws_iam_role.main[count.index].name
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
@@ -323,7 +294,19 @@ resource "aws_iam_role_policy_attachment" "main-clowdwatch-agent-server" {
 resource "aws_iam_role_policy_attachment" "main-ssm-agent" {
   count      = var.nat_type == "instance" ? local.az_count : 0
   role       = aws_iam_role.main[count.index].name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+//resource "aws_iam_role_policy_attachment" "main-ssm-patch" {
+//  count      = var.nat_type == "instance" ? local.az_count : 0
+//  role       = aws_iam_role.main[count.index].name
+//  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMPatchAssociation"
+//}
+
+resource "aws_iam_role_policy_attachment" "main-xray" {
+  count      = var.nat_type == "instance" ? local.az_count : 0
+  role       = aws_iam_role.main[count.index].name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
 }
 
 # EC2 Output
@@ -331,9 +314,9 @@ output "nat_iam_role_name" {
   value = aws_iam_role.main.*.name
 }
 
-output "nat_security_group_ids" {
-  value = aws_security_group.nat.*.id
-}
+//output "nat_security_group_id" {
+//  value = aws_security_group.nat[0].id
+//}
 
 output "billing_suggestion" {
   value = "Reserved Instances: ${var.instance_type} x ${local.az_count} (${local.region})"

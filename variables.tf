@@ -13,8 +13,8 @@ variable "default_tags" {
 //}
 
 variable "az_count" {
-  type    = string
-  default = 2
+  type    = number
+  default = 9
 }
 
 variable "cidr_block" {
@@ -47,7 +47,8 @@ variable "volume_type" {
 }
 
 variable "volume_size" {
-  default = "8"
+  type = number
+  default = 8
 }
 
 variable "key_name" {
@@ -57,4 +58,9 @@ variable "key_name" {
 variable "ami_account_id" {
   type    = string
   default = "self"
+}
+
+variable "endpoints" {
+  type = list(string)
+  default = []
 }

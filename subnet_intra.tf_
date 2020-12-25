@@ -1,0 +1,32 @@
+resource "aws_route_table" "intra" {
+  count  = local.az_count
+  vpc_id = aws_vpc.main.id
+
+  tags = merge(
+  local.tags,
+  {
+    Name = "intra-${local.name}-${local.az_name[count.index]}"
+  }
+  )
+}
+
+resource "aws_route_table_association" "intra" {
+  count          = local.az_count
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private[count.index].id
+}
+
+resource "aws_subnet" "intra" {
+  count             = local.az_count
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = local.intra_cidr[count.index]
+  availability_zone = local.az_name[count.index]
+
+  tags = merge(
+    local.tags,
+    {
+      Name = "${local.name}-${local.az_name[count.index]}-intra"
+    }
+  )
+}
+
