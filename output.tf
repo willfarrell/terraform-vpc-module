@@ -40,6 +40,6 @@ output "network_acl_id" {
   value = aws_network_acl.public.id
 }
 
-output "security_group_id" {
-  value = aws_default_security_group.default.id
+output "endpoint_security_group_id" {
+  value = aws_security_group.endpoint.id
 }

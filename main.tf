@@ -29,7 +29,7 @@ resource "aws_egress_only_internet_gateway" "main" {
 }
 
 # Override defaults
-resource "aws_default_route_table" "default" {
+resource "aws_default_route_table" "main" {
   default_route_table_id = aws_vpc.main.default_route_table_id
 
   tags = merge(
@@ -40,7 +40,7 @@ resource "aws_default_route_table" "default" {
   )
 }
 
-resource "aws_default_network_acl" "default" {
+resource "aws_default_network_acl" "main" {
   default_network_acl_id = aws_vpc.main.default_network_acl_id
 
   tags = merge(
@@ -51,7 +51,7 @@ resource "aws_default_network_acl" "default" {
   )
 }
 
-resource "aws_default_security_group" "default" {
+resource "aws_default_security_group" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = merge(
@@ -61,5 +61,3 @@ resource "aws_default_security_group" "default" {
   }
   )
 }
-
-

@@ -30,7 +30,7 @@ data "aws_ami" "nat" {
     name = "name"
 
     values = [
-      "amzn-ami-hvm-*-x86_64-nat",
+      "amzn-ami-hvm-*-x86_64-nat", # amzn2-ami-hvm-*-arm64-nat
     ]
   }
 

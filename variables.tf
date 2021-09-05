@@ -34,12 +34,8 @@ variable "iam_sudo_groups" {
   default = ""
 }
 
-variable "bastion_security_group_id" {
-  default = ""
-}
-
 variable "instance_type" {
-  default = "t3a.nano"
+  default = "t3a.nano" # t4g.nano
 }
 
 variable "volume_type" {
