@@ -26,6 +26,13 @@ resource "aws_internet_gateway" "main" {
 # IPv6
 resource "aws_egress_only_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
+
+  tags = merge(
+  local.tags,
+  {
+    Name = local.name
+  }
+  )
 }
 
 # Override defaults
