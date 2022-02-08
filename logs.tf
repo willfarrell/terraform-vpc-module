@@ -10,51 +10,41 @@ resource "aws_flow_log" "logs" {
 
 resource "aws_cloudwatch_log_group" "logs" {
   name = "/aws/vpc/${aws_vpc.main.id}"
-  retention_in_days = 365
+  retention_in_days = var.retention_in_days
+  kms_key_id = var.kms_key_arn
 }
 
 resource "aws_iam_role" "logs" {
   name = "${local.name}-vpc-logs-role"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "",
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "vpc-flow-logs.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
+  assume_role_policy = data.aws_iam_policy_document.role-logs.json
 }
-EOF
 
+data "aws_iam_policy_document" "role-logs" {
+  statement {
+    effect = "Allow"
+    principals {
+      identifiers = ["vpc-flow-logs.amazonaws.com"]
+      type        = "Service"
+    }
+    actions = ["sts:AssumeRole"]
+  }
 }
 
 resource "aws_iam_role_policy" "logs" {
   name = "${local.name}-vpc-logs-policy"
   role = aws_iam_role.logs.id
-
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:DescribeLogGroups",
-        "logs:DescribeLogStreams"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    }
-  ]
+  policy = data.aws_iam_policy_document.logs.json
 }
-EOF
 
+data "aws_iam_policy_document" "logs" {
+  statement {
+    sid = "CloudWatchLogs"
+    effect = "Allow"
+    actions = ["logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+      "logs:DescribeLogGroups",
+      "logs:DescribeLogStreams"]
+    resources = ["${aws_cloudwatch_log_group.logs.arn}"]
+  }
 }

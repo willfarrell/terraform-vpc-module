@@ -153,6 +153,7 @@ resource "aws_network_acl_rule" "private-egress_egress-https-public-ipv6" {
 }
 
 # Ephemeral Ports for Internal Requests
+#tfsec:ignore:aws-vpc-no-public-ingress-acl
 resource "aws_network_acl_rule" "private-egress_ingress-ephemeral-public-ipv4" {
   network_acl_id = aws_network_acl.private-egress.id
   rule_number    = 4999
@@ -164,6 +165,7 @@ resource "aws_network_acl_rule" "private-egress_ingress-ephemeral-public-ipv4" {
   to_port        = 65535
 }
 
+#tfsec:ignore:aws-vpc-no-public-ingress-acl
 resource "aws_network_acl_rule" "private-egress_ingress-ephemeral-public-ipv6" {
   network_acl_id  = aws_network_acl.private-egress.id
   rule_number     = 6999

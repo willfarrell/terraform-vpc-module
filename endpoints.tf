@@ -9,6 +9,7 @@ data "aws_prefix_list" "endpoint" {
 
 resource "aws_security_group" "endpoint" {
   name   = "${local.name}-vpc-endpoint-security-group"
+  description = "Access to VPC Endpoints"
   vpc_id = aws_vpc.main.id
 
   ingress {
@@ -77,6 +78,8 @@ resource "aws_network_acl_rule" "endpoints_egress-https-vpc-endpoint" {
 }
 
 # Ephemeral Ports for Internal Requests
+
+#tfsec:ignore:aws-vpc-no-public-ingress-acl
 resource "aws_network_acl_rule" "endpoints_ingress-ephemeral-vpc-endpoint" {
   network_acl_id = aws_network_acl.endpoints.id
   rule_number    = 4999
@@ -84,6 +87,18 @@ resource "aws_network_acl_rule" "endpoints_ingress-ephemeral-vpc-endpoint" {
   protocol       = "tcp"
   rule_action    = "allow"
   cidr_block     = "0.0.0.0/0"
+  from_port      = 1024
+  to_port        = 65535
+}
+
+#tfsec:ignore:aws-vpc-no-public-ingress-acl
+resource "aws_network_acl_rule" "endpoints_ingress-ephemeral-vpc-endpoint" {
+  network_acl_id = aws_network_acl.endpoints.id
+  rule_number    = 4999
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "allow"
+  cidr_block     = "::/0"
   from_port      = 1024
   to_port        = 65535
 }

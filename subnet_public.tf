@@ -55,6 +55,7 @@ resource "aws_network_acl" "public" {
 }
 
 # HTTP External Requests
+#tfsec:ignore:aws-vpc-no-public-ingress-acl
 resource "aws_network_acl_rule" "public_ingress-http-public-ipv4" {
   network_acl_id = aws_network_acl.public.id
   rule_number    = 4080
@@ -66,6 +67,7 @@ resource "aws_network_acl_rule" "public_ingress-http-public-ipv4" {
   to_port        = 80
 }
 
+#tfsec:ignore:aws-vpc-no-public-ingress-acl
 resource "aws_network_acl_rule" "public_ingress-http-public-ipv6" {
   network_acl_id  = aws_network_acl.public.id
   rule_number     = 6080
@@ -78,6 +80,7 @@ resource "aws_network_acl_rule" "public_ingress-http-public-ipv6" {
 }
 
 # HTTPS External Requests
+#tfsec:ignore:aws-vpc-no-public-ingress-acl
 resource "aws_network_acl_rule" "public_ingress-https-public-ipv4" {
   network_acl_id = aws_network_acl.public.id
   rule_number    = 4443
@@ -89,6 +92,7 @@ resource "aws_network_acl_rule" "public_ingress-https-public-ipv4" {
   to_port        = 443
 }
 
+#tfsec:ignore:aws-vpc-no-public-ingress-acl
 resource "aws_network_acl_rule" "public_ingress-https-public-ipv6" {
   network_acl_id  = aws_network_acl.public.id
   rule_number     = 6443

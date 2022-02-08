@@ -21,6 +21,16 @@ variable "cidr_block" {
   default = "10.0.0.0/16"
 }
 
+# Logs
+variable "retention_in_days" {
+  type = number
+  default = 365
+}
+variable "kms_key_arn" {
+  type = string
+  default = null
+}
+
 # NAT vars
 variable "nat_type" {
   default = "none"

@@ -53,6 +53,7 @@ data "aws_ami" "nat" {
     var.ami_account_id]
 }
 
+#tfsec:ignore:aws-autoscaling-no-public-ip
 resource "aws_launch_configuration" "nat" {
   count                = var.nat_type == "instance" ? local.az_count : 0
   #spot_price          = "0.0001"
@@ -98,6 +99,7 @@ resource "aws_launch_configuration" "nat" {
   }
 }
 
+#tfsec:ignore:aws-autoscaling-no-public-ip
 resource "aws_autoscaling_group" "nat" {
   count                     = var.nat_type == "instance" ? local.az_count : 0
   name                      = "${local.name}-nat-${local.az_name[count.index]}-asg"
@@ -128,6 +130,7 @@ resource "aws_autoscaling_group" "nat" {
 resource "aws_security_group" "nat" {
   count  = var.nat_type == "instance" ? 1 : 0
   name   = "${local.name}-nat-security-group"
+  description = "NAT proxy access to internet"
   vpc_id = aws_vpc.main.id
 
   ingress {
@@ -186,25 +189,18 @@ resource "aws_iam_instance_profile" "main" {
 resource "aws_iam_role" "main" {
   count = var.nat_type == "instance" ? local.az_count : 0
   name  = "${local.name}-nat-${local.az_name[count.index]}-role"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "",
-      "Effect": "Allow",
-      "Principal": {
-        "Service": [
-          "ec2.amazonaws.com"
-        ]
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
+  assume_role_policy = data.aws_iam_policy_document.role-main.json
 }
-EOF
 
+data "aws_iam_policy_document" "role-main" {
+  statement {
+    effect = "Allow"
+    principals {
+      identifiers = ["ec2.amazonaws.com"]
+      type        = "Service"
+    }
+    actions = ["sts:AssumeRole"]
+  }
 }
 
 resource "aws_iam_policy" "main-nat" {
@@ -212,29 +208,29 @@ resource "aws_iam_policy" "main-nat" {
   name        = "${local.name}-nat-${local.az_name[count.index]}-route-policy"
   path        = "/"
   description = "${local.name} NAT EIP & Route Tables Policy"
-
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-      {
-        "Action": [
-          "ec2:AssociateAddress",
-          "ec2:ReplaceRoute",
-          "ec2:CreateRoute",
-          "ec2:DeleteRoute",
-          "ec2:DescribeRouteTables",
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DescribeInstanceAttribute",
-          "ec2:ModifyInstanceAttribute"
-        ],
-        "Effect": "Allow",
-        "Resource": "*"
-      }
-    ]
+  policy = data.aws_iam_policy_document.main-nat.json
 }
-EOF
 
+#tfsec:ignore:aws-iam-no-policy-wildcards Has condition in place
+data "aws_iam_policy_document" "main-nat" {
+  statement {
+    sid = "ManageEC2"
+    effect = "Allow"
+    actions = ["ec2:AssociateAddress",
+      "ec2:ReplaceRoute",
+      "ec2:CreateRoute",
+      "ec2:DeleteRoute",
+      "ec2:DescribeRouteTables",
+      "ec2:DescribeNetworkInterfaces",
+      "ec2:DescribeInstanceAttribute",
+      "ec2:ModifyInstanceAttribute"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      values   = aws_subnet.public-egress.*.id
+      variable = "ec2:Subnet"
+    }
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "main-nat" {
@@ -248,36 +244,31 @@ resource "aws_iam_policy" "main-iam" {
   name        = "${local.name}-nat-${local.az_name[count.index]}-iam-policy"
   path        = "/"
   description = "${local.name} NAT SSH IAM Policy"
-
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "iam:ListUsers",
-        "iam:GetGroup"
-      ],
-      "Resource": "*"
-    }, {
-      "Effect": "Allow",
-      "Action": [
-        "iam:GetSSHPublicKey",
-        "iam:ListSSHPublicKeys"
-      ],
-      "Resource": [
-        "arn:aws:iam::${local.account_id}:user/*"
-      ]
-    }, {
-        "Effect": "Allow",
-        "Action": "ec2:DescribeTags",
-        "Resource": "*"
-    }
-  ]
+  policy = data.aws_iam_policy_document.main-iam.json
 }
-EOF
 
+#tfsec:ignore:aws-iam-no-policy-wildcards Their public keys ...
+data "aws_iam_policy_document" "main-iam" {
+  statement {
+    sid = "ListUsers"
+    effect = "Allow"
+    actions = ["iam:ListUsers",
+      "iam:GetGroup"]
+    resources = ["*"]
+  }
+  statement {
+    sid = "GetSSHKeys"
+    effect = "Allow"
+    actions = ["iam:GetSSHPublicKey",
+      "iam:ListSSHPublicKeys"]
+    resources = ["*"]
+  }
+  statement {
+    sid = "ForgetWhatThisIsFor"
+    effect = "Allow"
+    actions = ["ec2:DescribeTags"]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "main-iam" {
