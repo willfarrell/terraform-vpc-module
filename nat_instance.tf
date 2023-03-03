@@ -47,51 +47,6 @@ data "aws_ami" "nat" {
   ]
 }
 
-resource "aws_launch_configuration" "nat" {
-  count                = var.nat_type == "instance" ? local.az_count : 0
-  #spot_price          = "0.0001"
-  name_prefix          = "${local.name}-nat-${local.az_name[count.index]}-"
-  image_id             = data.aws_ami.nat[0].image_id
-  key_name             = var.key_name
-  instance_type        = var.instance_type
-  iam_instance_profile = aws_iam_instance_profile.main[count.index].name
-  security_groups      = [
-    aws_security_group.nat[0].id
-  ]
-  user_data = templatefile("${path.module}/user_data.sh", {
-    BANNER                = "NAT ${local.az_name[count.index]}"
-    EIP_ID                = aws_eip.nat[count.index].id
-    SUBNET_ID             = aws_subnet.private[count.index].id
-    ROUTE_TABLE_ID        = aws_route_table.private-instance[count.index].id
-    VPC_CIDR              = var.cidr_block
-    IAM_AUTHORIZED_GROUPS = var.iam_user_groups
-    SUDOERS_GROUPS        = var.iam_sudo_groups
-    LOCAL_GROUPS          = ""
-  })
-  ebs_optimized     = "false"
-  enable_monitoring = "true"
-
-  # Must be true in public subnets if assigning EIP in userdata
-  associate_public_ip_address = "true"
-
-  metadata_options {
-    http_endpoint               = "enabled"
-    http_put_response_hop_limit = 1
-    http_tokens                 = "required"
-  }
-
-  root_block_device {
-    volume_type           = var.volume_type
-    volume_size           = var.volume_size
-    delete_on_termination = true
-    encrypted             = true
-  }
-
-  lifecycle {
-    create_before_destroy = "true"
-  }
-}
-
 resource "aws_launch_template" "nat" {
   count = var.nat_type == "instance" ? local.az_count : 0
 
