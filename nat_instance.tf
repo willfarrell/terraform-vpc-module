@@ -5,10 +5,10 @@ resource "aws_route_table" "private-instance" {
   vpc_id = aws_vpc.main.id
 
   tags = merge(
-  local.tags,
-  {
-    Name = "private-nat-${local.name}-${local.az_name[count.index]}"
-  }
+    local.tags,
+    {
+      Name = "private-nat-${local.name}-${local.az_name[count.index]}"
+    }
   )
 }
 
@@ -43,7 +43,8 @@ data "aws_ami" "nat" {
   }
 
   owners = [
-    var.ami_account_id]
+    var.ami_account_id
+  ]
 }
 
 resource "aws_launch_configuration" "nat" {
@@ -57,7 +58,7 @@ resource "aws_launch_configuration" "nat" {
   security_groups      = [
     aws_security_group.nat[0].id
   ]
-  user_data            = templatefile("${path.module}/user_data.sh", {
+  user_data = templatefile("${path.module}/user_data.sh", {
     BANNER                = "NAT ${local.az_name[count.index]}"
     EIP_ID                = aws_eip.nat[count.index].id
     SUBNET_ID             = aws_subnet.private[count.index].id
@@ -67,8 +68,8 @@ resource "aws_launch_configuration" "nat" {
     SUDOERS_GROUPS        = var.iam_sudo_groups
     LOCAL_GROUPS          = ""
   })
-  ebs_optimized        = "false"
-  enable_monitoring    = "true"
+  ebs_optimized     = "false"
+  enable_monitoring = "true"
 
   # Must be true in public subnets if assigning EIP in userdata
   associate_public_ip_address = "true"
@@ -91,14 +92,72 @@ resource "aws_launch_configuration" "nat" {
   }
 }
 
+resource "aws_launch_template" "nat" {
+  count = var.nat_type == "instance" ? local.az_count : 0
+
+  name                   = "${local.name}-nat-${local.az_name[count.index]}"
+  image_id               = data.aws_ami.nat[0].image_id
+  key_name               = var.key_name
+  instance_type          = var.instance_type
+  ebs_optimized          = false
+  update_default_version = true
+
+  user_data = base64encode(templatefile("${path.module}/user_data.sh", {
+    BANNER                = "NAT ${local.az_name[count.index]}"
+    EIP_ID                = aws_eip.nat[count.index].id
+    SUBNET_ID             = aws_subnet.private[count.index].id
+    ROUTE_TABLE_ID        = aws_route_table.private-instance[count.index].id
+    VPC_CIDR              = var.cidr_block
+    IAM_AUTHORIZED_GROUPS = var.iam_user_groups
+    SUDOERS_GROUPS        = var.iam_sudo_groups
+    LOCAL_GROUPS          = ""
+  }))
+
+  block_device_mappings {
+    device_name = data.aws_ami.nat[count.index].root_device_name
+
+    ebs {
+      volume_type           = var.volume_type
+      volume_size           = var.volume_size
+      delete_on_termination = true
+      encrypted             = true
+    }
+  }
+
+  iam_instance_profile {
+    arn = aws_iam_instance_profile.main[count.index].arn
+  }
+
+  monitoring {
+    enabled = true
+  }
+
+  network_interfaces {
+    # Must be true in public subnets if assigning EIP in userdata
+    associate_public_ip_address = true
+    delete_on_termination       = true
+    security_groups             = [aws_security_group.nat[0].id]
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_put_response_hop_limit = 1
+    http_tokens                 = "required"
+  }
+}
+
 resource "aws_autoscaling_group" "nat" {
   count                     = var.nat_type == "instance" ? local.az_count : 0
   name                      = "${local.name}-nat-${local.az_name[count.index]}-asg"
-  max_size                  = "1"
-  min_size                  = "1"
-  desired_capacity          = "1"
+  max_size                  = 1
+  min_size                  = 1
+  desired_capacity          = 1
   health_check_grace_period = 30
-  launch_configuration      = aws_launch_configuration.nat[count.index].name
+
+  launch_template {
+    id      = aws_launch_template.nat[count.index].id
+    version = "$Latest"
+  }
 
   vpc_zone_identifier = [
     aws_subnet.public[count.index].id,
@@ -162,10 +221,10 @@ resource "aws_security_group" "nat" {
   }
 
   tags = merge(
-  local.tags,
-  {
-    Name = "${local.name}-nat"
-  }
+    local.tags,
+    {
+      Name = "${local.name}-nat"
+    }
   )
 }
 
