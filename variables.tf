@@ -41,7 +41,7 @@ variable "instance_type" {
 variable "use_spot_instance" {
   type        = bool
   description = "Use spot for NAT instances"
-  default     = false
+  default     = true
 }
 
 variable "volume_type" {
