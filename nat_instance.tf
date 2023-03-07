@@ -68,6 +68,17 @@ resource "aws_launch_template" "nat" {
     LOCAL_GROUPS          = ""
   }))
 
+  dynamic "instance_market_options" {
+    for_each = var.use_spot_instance ? [true] : []
+    content {
+      market_type = "spot"
+
+      spot_options {
+        spot_instance_type = "one-time"
+      }
+    }
+  }
+
   block_device_mappings {
     device_name = data.aws_ami.nat[count.index].root_device_name
 

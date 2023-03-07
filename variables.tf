@@ -38,12 +38,18 @@ variable "instance_type" {
   default = "t3a.nano" # t4g.nano
 }
 
+variable "use_spot_instance" {
+  type        = bool
+  description = "Use spot for NAT instances"
+  default     = false
+}
+
 variable "volume_type" {
   default = "gp2"
 }
 
 variable "volume_size" {
-  type = number
+  type    = number
   default = 8
 }
 
@@ -57,6 +63,6 @@ variable "ami_account_id" {
 }
 
 variable "endpoints" {
-  type = list(string)
+  type    = list(string)
   default = []
 }
