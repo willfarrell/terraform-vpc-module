@@ -10,7 +10,7 @@ resource "aws_flow_log" "logs" {
 
 resource "aws_cloudwatch_log_group" "logs" {
   name = "/aws/vpc/${aws_vpc.main.id}"
-  retention_in_days = 365
+  retention_in_days = terraform.workspace == "production" ? 365 : 7
 }
 
 resource "aws_iam_role" "logs" {
