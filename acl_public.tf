@@ -12,6 +12,51 @@ resource "aws_network_acl" "public" {
   )
 }
 
+# SecurityHub
+resource "aws_network_acl_rule" "ingress_security_hub_ssh_ipv4" {
+  network_acl_id = aws_network_acl.public.id
+  rule_number    = 4022
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "deny"
+  cidr_block     = "0.0.0.0/0"
+  from_port      = 22
+  to_port        = 22
+}
+
+resource "aws_network_acl_rule" "ingress_security_hub_ssh_ipv6" {
+  network_acl_id  = aws_network_acl.public.id
+  rule_number     = 6022
+  egress          = false
+  protocol        = "tcp"
+  rule_action     = "deny"
+  ipv6_cidr_block = "::/0"
+  from_port       = 22
+  to_port         = 22
+}
+
+resource "aws_network_acl_rule" "ingress_security_hub_rdp_ipv4" {
+  network_acl_id = aws_network_acl.public.id
+  rule_number    = 4389
+  egress         = false
+  protocol       = "tcp"
+  rule_action    = "deny"
+  cidr_block     = "0.0.0.0/0"
+  from_port      = 3389
+  to_port        = 3389
+}
+
+resource "aws_network_acl_rule" "ingress_security_hub_rdp_ipv6" {
+  network_acl_id  = aws_network_acl.public.id
+  rule_number     = 6389
+  egress          = false
+  protocol        = "tcp"
+  rule_action     = "deny"
+  ipv6_cidr_block = "::/0"
+  from_port       = 3389
+  to_port         = 3389
+}
+
 # TODO move external to ELB
 # HTTP External Requests
 resource "aws_network_acl_rule" "ingress_http_public_ipv4" {
