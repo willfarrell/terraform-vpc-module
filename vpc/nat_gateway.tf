@@ -1,6 +1,19 @@
-# gateway
+resource "aws_nat_gateway" "main" {
+  count         = var.nat_type == "regional" ? 1 : 0
+  vpc_id            = aws_vpc.main.id
+  availability_mode = "regional"
+  
+  tags = merge(
+  local.tags,
+  {
+    Name = "${local.name}-nat"
+  }
+  )
+}
+
+# zonal
 resource "aws_route_table" "private-gateway" {
-  count  = var.nat_type == "gateway" ? local.az_count : 0
+  count  = var.nat_type == "zonal" ? local.az_count : 0
   vpc_id = aws_vpc.main.id
 
   route {
@@ -22,14 +35,14 @@ resource "aws_route_table" "private-gateway" {
 }
 
 resource "aws_route_table_association" "private-gateway" {
-  count          = var.nat_type == "gateway" ? local.az_count : 0
+  count          = var.nat_type == "zonal" ? local.az_count : 0
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private-gateway[count.index].id
 }
 
 # gateway
 resource "aws_nat_gateway" "public" {
-  count         = var.nat_type == "gateway" ? local.az_count : 0
+  count         = var.nat_type == "zonal" ? local.az_count : 0
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
 
