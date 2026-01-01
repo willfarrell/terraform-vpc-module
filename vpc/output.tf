@@ -1,3 +1,19 @@
+
+output "vpc_id" {
+  value = aws_vpc.main.id
+}
+
+output "subnet_ids" {
+  value = {
+    public-ingress = aws_subnet.public.*.id
+    public-egress = aws_subnet.public.*.id
+    private-egress = aws_subnet.private.*.id
+    private = aws_subnet.private.*.id
+  }
+}
+
+
+
 output "id" {
   value = aws_vpc.main.id
 }
@@ -21,7 +37,8 @@ output "private_subnet_ids" {
 output "private_route_table_ids" {
   value = concat(
     aws_route_table.private.*.id,
-    aws_route_table.private-gateway.*.id,
+    aws_route_table.private-regional.*.id,
+    aws_route_table.private-zonal.*.id,
     aws_route_table.private-instance.*.id
   )
 }

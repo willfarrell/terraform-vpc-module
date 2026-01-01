@@ -43,7 +43,7 @@ resource "aws_vpc_endpoint" "main" {
 
   security_group_ids  = contains(["s3","dynamodb"], each.key) ? null : [aws_security_group.endpoint.id]  # Interface Only
   subnet_ids          = contains(["s3","dynamodb"], each.key) ? null : aws_subnet.private.*.id  # Interface Only
-  route_table_ids     = contains(["s3","dynamodb"], each.key) ? concat(aws_route_table.private-gateway.*.id, aws_route_table.private-instance.*.id, aws_route_table.private.*.id) : null  # Gateway Only
+  route_table_ids     = contains(["s3","dynamodb"], each.key) ? concat(aws_route_table.private-regional.*.id, aws_route_table.private-zonal.*.id, aws_route_table.private-instance.*.id, aws_route_table.private.*.id) : null  # Gateway Only
   private_dns_enabled = contains(["s3","dynamodb"], each.key) ? false : true
 
   tags = merge(local.tags, { Name = "${each.key}-vpc-endpoint" })
